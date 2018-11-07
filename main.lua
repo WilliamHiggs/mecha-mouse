@@ -9,6 +9,12 @@ local Timer = require "hump.timer"
 local startTime = love.timer.getTime()
 spawnTimer = Timer.new()
 
+function truncateTime(x)
+  local numStr = tostring(x)
+  local trunStr = string.sub(numStr, 1, -12)
+  return trunStr
+end
+
 function newAnimation(image, width, height, duration)
   local animation = {}
   animation.spriteSheet = image;
@@ -73,19 +79,11 @@ function CheckCollision(box1x, box1y, box1w, box1h, box2x, box2y, box2w, box2h)
        box2x > box1x + box1w - 1 or -- Is box2 on the right side of box1?
        box2y > box1y + box1h - 1    -- Is b2 under b1?
     then
-        return false                -- No collision.  Yay!
+        return false
     else
-        return true                 -- Yes collision.  Ouch!
+        return true
     end
 end
---[[
-function CheckCollision(x1,y1,w1,h1, x2,y2,w2,h2)
-  return x1 < x2+w2 and
-         x2 < x1+w1 and
-         y1 < y2+h2 and
-         y2 < y1+h1
-end
-]]--
 
 -- LOAD
 function love.load()
@@ -114,6 +112,7 @@ function love.update(dt)
   spawnTimer:update(dt)
 
   if love.keyboard.isDown("up") then
+    gameSpeed = gameSpeed + 2
     if player.y_velocity == 0 then
       player.y_velocity = player.jump_height
     end
@@ -158,18 +157,18 @@ end
 
 -- DRAW
 function love.draw()
-
+  -- TIMER
+  gameTimer = love.timer.getTime() - startTime
   love.graphics.setFont(menuFont)
+  love.graphics.print(truncateTime(gameTimer), 500, 20)
+  -- PLAYER MODE
   love.graphics.print(player.mode, 40, 40)
-  love.graphics.print((love.timer.getTime() - startTime), 500, 20)
+  -- BACKGROUND
   love.graphics.setBackgroundColor( 0, 1, 1 )
+  -- PLATFORM
   love.graphics.setColor(0,1,0)
 	love.graphics.rectangle('fill', platform.x, platform.y, platform.width, platform.height)
-
-	--love.graphics.draw(player.img, player.x, player.y)
-  love.graphics.setColor(50, 50, 50)
-  love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
-
+  -- OBSTACLES
   for i = #obstacles, 1, -1 do
     local obstacle = obstacles[i]
     -- draw stuff
@@ -179,9 +178,14 @@ function love.draw()
 
     if CheckCollision(player.x, player.y, player.width, player.height, obstacle.x, obstacle.y, obstacle.width, obstacle.height) then
       -- Player death sequence
-      love.graphics.print("dead", 80, 80)
+      gameSpeed = 0
+      spawnTimer:clear()
+      love.graphics.print(truncateTime(gameTimer), 80, 80)
     end
-
   end
+  -- PLAYER
+  --love.graphics.draw(player.img, player.x, player.y)
+  love.graphics.setColor(50, 50, 50)
+  love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
 
 end
