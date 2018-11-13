@@ -41,6 +41,11 @@ function newAnimation(image, width, height, duration)
   return animation
 end
 
+function spriteNum(item)
+  local item = item
+  return math.floor(item.img.currentTime / item.img.duration * #item.img.quads) + 1
+end
+
 function newObstacle(img, x, y, w, h)
   local obstacle = {}
   obstacle.x = x
@@ -52,11 +57,12 @@ function newObstacle(img, x, y, w, h)
   table.insert(obstacles, obstacle)
 end
 
-function loadPlatform()
+function loadPlatform(img)
   platform.width = love.graphics.getWidth()
 	platform.height = love.graphics.getHeight()
 	platform.x = 0
 	platform.y = floorLevel
+  platform.img = img
 end
 
 function loadPlayer(x, y, w, h)
@@ -87,16 +93,17 @@ end
 
 -- LOAD
 function love.load()
-
+  -- Load fonts
   menuFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 25)
   largeFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 100)
-
+  -- Load images
   poopImg = love.graphics.newImage("/assets/poop.png")
-  flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 1)
+  flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.4)
+  platformSprite = newAnimation(love.graphics.newImage("/assets/Road_035.png"), 800, 200, 1)
 
   loadPlayer(5, floorLevel - 100, 100, 100)
 
-  loadPlatform()
+  loadPlatform(platformSprite)
 
   function animate(animation, dt)
     animation.currentTime = animation.currentTime + dt
@@ -124,6 +131,7 @@ function love.update(dt)
   spawnTimer:update(dt)
 
   animate(flySprite, dt)
+  animate(platformSprite, dt)
 
   if love.keyboard.isDown("up") then
     gameSpeed = gameSpeed + 2
@@ -180,22 +188,22 @@ function love.draw()
   -- PLAYER MODE
   love.graphics.print(player.mode, 40, 40)
   -- BACKGROUND
-  love.graphics.setBackgroundColor( 0, 1, 1 )
+  love.graphics.setBackgroundColor(0, 1, 1)
   -- PLATFORM
-  love.graphics.setColor(0,1,0)
-	love.graphics.rectangle('fill', platform.x, platform.y, platform.width, platform.height)
+  --love.graphics.setColor(0,1,0)
+	--love.graphics.rectangle('fill', platform.x, platform.y, platform.width, platform.height)
+  local platformSpriteNum = spriteNum(platform)
+  love.graphics.draw(platform.img.spriteSheet, platform.img.quads[platformSpriteNum], platform.x, platform.y)
   -- OBSTACLES
   for i = #obstacles, 1, -1 do
     local obstacle = obstacles[i]
     -- draw stuff
     if type(obstacle.img) == "table" then
-      local spriteNum = math.floor(obstacle.img.currentTime / obstacle.img.duration * #obstacle.img.quads) + 1
-      love.graphics.draw(obstacle.img.spriteSheet, obstacle.img.quads[spriteNum], obstacle.x, obstacle.y)
+      local obstacleSpriteNum = spriteNum(obstacle)
+      love.graphics.draw(obstacle.img.spriteSheet, obstacle.img.quads[obstacleSpriteNum], obstacle.x, obstacle.y)
     else
       love.graphics.draw(obstacle.img, obstacle.x, obstacle.y)
     end
-    --love.graphics.setColor(1, 0, 0)
-    --love.graphics.rectangle("fill", obstacle.x, obstacle.y, obstacle.width, obstacle.height)
 
     if CheckCollision(player.x, player.y, player.width, player.height, obstacle.x, obstacle.y, obstacle.width, obstacle.height) then
       -- Player death sequence
