@@ -6,12 +6,15 @@ local obstacles = {}
 local gameSpeed = 300
 local floorLevel = 500
 local Timer = require "hump.timer"
+local Gamestate = require "hump.gamestate"
+local startMenu = {}
+local game = {}
 local startTime = love.timer.getTime()
 spawnTimer = Timer.new()
 
 function truncateTime(x)
   local numStr = tostring(x)
-  local trunStr = string.sub(numStr, 1, -12)
+  local trunStr = string.sub(numStr, 1, -11)
   return trunStr
 end
 
@@ -61,7 +64,7 @@ function loadPlatform(img)
   platform.width = love.graphics.getWidth()
 	platform.height = love.graphics.getHeight()
 	platform.x = 0
-	platform.y = floorLevel
+	platform.y = floorLevel - 50
   platform.img = img
 end
 
@@ -93,13 +96,18 @@ end
 
 -- LOAD
 function love.load()
+  -- Gamestate loading
+  Gamestate.registerEvents()
+  Gamestate.switch(startMenu)
   -- Load fonts
   menuFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 25)
   largeFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 100)
   -- Load images
   poopImg = love.graphics.newImage("/assets/poop.png")
+  cokeImg = love.graphics.newImage("/assets/coke-can.png")
   flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.4)
-  platformSprite = newAnimation(love.graphics.newImage("/assets/Road_035.png"), 800, 200, 1)
+  platformSprite = newAnimation(love.graphics.newImage("/assets/Road_035.png"), 800, 200, 0.5)
+
 
   loadPlayer(5, floorLevel - 100, 100, 100)
 
@@ -121,20 +129,34 @@ function love.load()
       obstacle1 = newObstacle(poopImg, 1200, floorLevel - 100, 100, 100)
       obstacle3 = newObstacle(flySprite, 1200, floorLevel - 500, 100, 100)
     else
-      obstacle2 = newObstacle(poopImg, 1200, floorLevel - 200, 100, 200)
+      obstacle2 = newObstacle(cokeImg, 1200, floorLevel - 200, 90, 200)
     end
   end)
 end
 
--- UPDATE
-function love.update(dt)
+-- STARTMENU DRAW
+function startMenu:draw()
+  love.graphics.setBackgroundColor(0, 0, 0)
+  love.graphics.setFont(menuFont)
+  love.graphics.print("PRESS ENTER TO START", 200, 200)
+end
+
+-- STARTMENU SWITCH
+function startMenu:keypressed(key)
+  if key == "return" then
+    Gamestate.switch(game)
+  end
+end
+
+-- GAME UPDATE
+function game:update(dt)
   spawnTimer:update(dt)
 
   animate(flySprite, dt)
   animate(platformSprite, dt)
 
   if love.keyboard.isDown("up") then
-    gameSpeed = gameSpeed + 2
+    gameSpeed = gameSpeed + 3
     if player.y_velocity == 0 then
       player.y_velocity = player.jump_height
     end
@@ -177,8 +199,8 @@ function love.update(dt)
 
 end
 
--- DRAW
-function love.draw()
+-- GAME DRAW
+function game:draw()
   -- TIMER
   if player.mode ~= "dead" then
     gameTimer = love.timer.getTime() - startTime
