@@ -5,10 +5,12 @@ local player = {}
 local obstacles = {}
 local gameSpeed = 300
 local floorLevel = 500
+local windowx = love.graphics.getWidth()
 local Timer = require "hump.timer"
 local Gamestate = require "hump.gamestate"
 local startMenu = {}
 local game = {}
+local endMenu = {}
 local startTime = love.timer.getTime()
 spawnTimer = Timer.new()
 
@@ -73,7 +75,7 @@ function loadPlayer(x, y, w, h)
 	player.y = y
   player.width = w
   player.height = h
-	player.img = nil --love.graphics.newImage('/assets/test.png')
+	player.img = nil
 	player.ground = player.y
 	player.y_velocity = 0
 	player.jump_height = -600
@@ -106,12 +108,22 @@ function love.load()
   poopImg = love.graphics.newImage("/assets/poop.png")
   cokeImg = love.graphics.newImage("/assets/coke-can.png")
   flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.4)
-  platformSprite = newAnimation(love.graphics.newImage("/assets/Road_035.png"), 800, 200, 0.5)
+  -- PLATFORM LOAD
+  bgImg = love.graphics.newImage("/assets/Road_035.png")
 
+  bg1 = {}
+  bg1.img = love.graphics.newQuad(0, 0, 800, 200, 1400, 200)
+  bg1.x = 0
+  bg1.width = 800
 
-  loadPlayer(5, floorLevel - 100, 100, 100)
+  bg2 = {}
+  bg2.img = love.graphics.newQuad(0, 0, 800, 200, 1400, 200)
+  bg2.x = -windowx
+  bg2.width = 800
 
   loadPlatform(platformSprite)
+
+  loadPlayer(5, floorLevel - 100, 100, 100)
 
   function animate(animation, dt)
     animation.currentTime = animation.currentTime + dt
@@ -152,8 +164,18 @@ end
 function game:update(dt)
   spawnTimer:update(dt)
 
+  -- PLATFORM UPDATE
+  bg1.x = bg1.x - gameSpeed * dt
+  bg2.x = bg2.x - gameSpeed * dt
+
+  if bg1.x < -windowx then
+    bg1.x = bg2.x + bg1.width
+  end
+  if bg2.x < -windowx then
+    bg2.x = bg1.x + bg2.width
+  end
+
   animate(flySprite, dt)
-  animate(platformSprite, dt)
 
   if love.keyboard.isDown("up") then
     gameSpeed = gameSpeed + 3
@@ -208,14 +230,12 @@ function game:draw()
   love.graphics.setFont(menuFont)
   love.graphics.print(truncateTime(gameTimer), 500, 20)
   -- PLAYER MODE
-  love.graphics.print(player.mode, 40, 40)
+  love.graphics.print(player.mode, 40, 20)
   -- BACKGROUND
   love.graphics.setBackgroundColor(0, 1, 1)
   -- PLATFORM
-  --love.graphics.setColor(0,1,0)
-	--love.graphics.rectangle('fill', platform.x, platform.y, platform.width, platform.height)
-  local platformSpriteNum = spriteNum(platform)
-  love.graphics.draw(platform.img.spriteSheet, platform.img.quads[platformSpriteNum], platform.x, platform.y)
+  love.graphics.draw(bgImg, bg1.img, bg1.x, floorLevel - 50)
+  love.graphics.draw(bgImg, bg2.img, bg2.x, floorLevel - 50)
   -- OBSTACLES
   for i = #obstacles, 1, -1 do
     local obstacle = obstacles[i]
@@ -234,7 +254,7 @@ function game:draw()
       gameSpeed = 0
       spawnTimer:clear()
       love.graphics.setFont(largeFont)
-      love.graphics.setColor(0, 0, 0)
+      --love.graphics.setColor(0, 0, 0)
       love.graphics.print(truncateTime(gameTimer), 400, 400)
     end
   end
