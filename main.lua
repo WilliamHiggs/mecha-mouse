@@ -6,6 +6,7 @@ local obstacles = {}
 local gameSpeed = 300
 local floorLevel = 500
 local windowx = love.graphics.getWidth()
+local windowy = love.graphics.getHeight()
 local Timer = require "hump.timer"
 local Gamestate = require "hump.gamestate"
 local startMenu = {}
@@ -63,32 +64,32 @@ function newObstacle(img, x, y, w, h)
 end
 
 function loadPlatform(img)
-  platform.width = love.graphics.getWidth()
-	platform.height = love.graphics.getHeight()
+  platform.width = windowx
+	platform.height = windowy
 	platform.x = 0
 	platform.y = floorLevel - 50
   platform.img = img
 end
 
-function loadPlayer(x, y, w, h)
+function loadPlayer(img, x, y, w, h)
   player.x = x
 	player.y = y
   player.width = w
   player.height = h
-	player.img = nil
+	player.img = img
 	player.ground = player.y
 	player.y_velocity = 0
 	player.jump_height = -600
-	player.gravity = -900
+	player.gravity = -1000
   player.mode = "mouse"
 end
 
 -- boundingBox Collision detection
 function CheckCollision(box1x, box1y, box1w, box1h, box2x, box2y, box2w, box2h)
-    if box1x > box2x + box2w - 1 or -- Is box1 on the right side of box2?
-       box1y > box2y + box2h - 1 or -- Is box1 under box2?
-       box2x > box1x + box1w - 1 or -- Is box2 on the right side of box1?
-       box2y > box1y + box1h - 1    -- Is b2 under b1?
+    if box1x > box2x + box2w - 5 or -- Is box1 on the right side of box2?
+       box1y > box2y + box2h - 5 or -- Is box1 under box2?
+       box2x > box1x + box1w - 5 or -- Is box2 on the right side of box1?
+       box2y > box1y + box1h - 5    -- Is b2 under b1?
     then
         return false
     else
@@ -105,6 +106,10 @@ function love.load()
   menuFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 25)
   largeFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 100)
   -- Load images
+  mouseSprite = newAnimation(love.graphics.newImage("/assets/mouse.png"), 100, 100, 1)
+  mouseJumpImg = love.graphics.newImage("/assets/mouseJump.png")
+  mechaSprite = newAnimation(love.graphics.newImage("/assets/mecha.png"), 100, 100, 1)
+  mechaJumpImg = love.graphics.newImage("/assets/mechaJump.png")
   poopImg = love.graphics.newImage("/assets/poop.png")
   cokeImg = love.graphics.newImage("/assets/coke-can.png")
   flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.4)
@@ -123,7 +128,7 @@ function love.load()
 
   loadPlatform(platformSprite)
 
-  loadPlayer(5, floorLevel - 100, 100, 100)
+  loadPlayer(mouseSprite, 5, floorLevel - 100, 100, 100)
 
   function animate(animation, dt)
     animation.currentTime = animation.currentTime + dt
@@ -133,6 +138,7 @@ function love.load()
   end
 
   spawnTimer:every(2, function()
+    gameSpeed = gameSpeed + 20
     local function getRandom()
       return love.math.random(0, 1)
     end
@@ -175,10 +181,12 @@ function game:update(dt)
     bg2.x = bg1.x + bg2.width
   end
 
+  animate(mouseSprite, dt)
+  animate(mechaSprite, dt)
+
   animate(flySprite, dt)
 
   if love.keyboard.isDown("up") then
-    gameSpeed = gameSpeed + 3
     if player.y_velocity == 0 then
       player.y_velocity = player.jump_height
     end
@@ -259,8 +267,25 @@ function game:draw()
     end
   end
   -- PLAYER
-  --love.graphics.draw(player.img, player.x, player.y)
-  love.graphics.setColor(50, 50, 50)
-  love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
-
+  if (player.mode == "mouse") then
+    if (player.y_velocity > 0) then
+      player.img = mouseJumpImg
+      love.graphics.draw(player.img, player.x, player.y)
+    else
+      player.img = mouseSprite
+      local mouseSpriteNum = spriteNum(player)
+      love.graphics.draw(player.img.spriteSheet, player.img.quads[mouseSpriteNum], player.x, player.y)
+    end
+  elseif (player.mode == "mecha") then
+    if (player.y_velocity > 0) then
+      player.img = mechaJumpImg
+      love.graphics.draw(player.img, player.x, player.y)
+    else
+      player.img = mechaSprite
+      local mechaSpriteNum = spriteNum(player)
+      love.graphics.draw(player.img.spriteSheet, player.img.quads[mechaSpriteNum], player.x, player.y)
+    end
+  end
+  --love.graphics.setColor(50, 50, 50)
+  --love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
 end
