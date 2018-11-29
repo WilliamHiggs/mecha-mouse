@@ -95,9 +95,14 @@ function love.load()
   Gamestate.registerEvents()
   Gamestate.switch(startMenu)
   -- Load sounds
-  backgroundMusic = love.audio.newSource("/assets/mecha-mouse-track.wav", "stream")
-  backgroundMusic:setLooping(true)
-  backgroundMusic:play()
+  sounds = {}
+  sounds.mouseSqueak = {}
+  sounds.mouseSqueak.audio = love.audio.newSource("/assets/mouseSqueak.mp3", "static")
+  sounds.mouseSqueak.played = false
+  sounds.backgroundMusic = {}
+  sounds.backgroundMusic.audio = love.audio.newSource("/assets/mecha-mouse-track.wav", "stream")
+  sounds.backgroundMusic.audio:setLooping(true)
+  sounds.backgroundMusic.audio:play()
   -- Load fonts
   menuFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 25)
   largeFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 100)
@@ -281,6 +286,10 @@ function game:draw()
 
     if CheckCollision(player.x, player.y, player.width, player.height, obstacle.x, obstacle.y, obstacle.width, obstacle.height) then
       -- Player death sequence
+      if (sounds.mouseSqueak.played == false) then
+        sounds.mouseSqueak.audio:play()
+        sounds.mouseSqueak.played = true
+      end
       player.mode = "dead"
       player.jump_height = 0
       gameSpeed = 0
