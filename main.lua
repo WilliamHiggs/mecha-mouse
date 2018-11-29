@@ -12,19 +12,17 @@ local Gamestate = require "hump.gamestate"
 local startMenu = {}
 local game = {}
 local endMenu = {}
-local startTime = love.timer.getTime()
-spawnTimer = Timer.new()
 
-function truncateTime(x)
-  local numStr = tostring(x)
-  local trunStr = string.sub(numStr, 1, -11)
-  return trunStr
+function truncateTime(number)
+  local decimals = 2
+  local power = 10^decimals
+  return math.floor(number * power) / power
 end
 
 function newAnimation(image, width, height, duration)
   local animation = {}
-  animation.spriteSheet = image;
-  animation.quads = {};
+  animation.spriteSheet = image
+  animation.quads = {}
 
   for y = 0, image:getHeight() - height, height do
     for x = 0, image:getWidth() - width, width do
@@ -94,6 +92,9 @@ function love.load()
   -- Gamestate loading
   Gamestate.registerEvents()
   Gamestate.switch(startMenu)
+  -- Load Timers
+  startTime = love.timer.getTime()
+  spawnTimer = Timer.new()
   -- Load sounds
   sounds = {}
   sounds.mouseSqueak = {}
@@ -114,7 +115,7 @@ function love.load()
   deadMouseSprite = newAnimation(love.graphics.newImage("/assets/deadMouse.png"), 100, 100, 0.9)
   poopImg = love.graphics.newImage("/assets/poop.png")
   cokeImg = love.graphics.newImage("/assets/coke-can.png")
-  flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.9)
+  flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.8)
 
   -- BACKGROUND LOAD
   bgImg = love.graphics.newImage("/assets/curbSprite.png")
@@ -154,7 +155,7 @@ function love.load()
   end
 
   spawnTimer:every(2, function()
-    gameSpeed = gameSpeed + 20
+    gameSpeed = gameSpeed + 15
     local function getRandom()
       return love.math.random(0, 1)
     end
@@ -185,7 +186,6 @@ end
 -- GAME UPDATE
 function game:update(dt)
   spawnTimer:update(dt)
-
   -- PLATFORM UPDATE
   pf1.x = pf1.x - gameSpeed * dt
   pf2.x = pf2.x - gameSpeed * dt
