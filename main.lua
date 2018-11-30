@@ -1,152 +1,71 @@
 
 -- Main.lua Löve file
---local platform = {}
-local player = {}
-local obstacles = {}
-local gameSpeed = 300
-local floorLevel = 500
-local windowx = love.graphics.getWidth()
-local windowy = love.graphics.getHeight()
-local Timer = require "hump.timer"
-local Gamestate = require "hump.gamestate"
+-- Imports
+Timer = require "hump.timer"
+Gamestate = require "hump.gamestate"
+-- Game States
 local startMenu = {}
 local game = {}
-local endMenu = {}
-
-function truncateTime(number)
-  local decimals = 2
-  local power = 10^decimals
-  return math.floor(number * power) / power
-end
-
-function newAnimation(image, width, height, duration)
-  local animation = {}
-  animation.spriteSheet = image
-  animation.quads = {}
-
-  for y = 0, image:getHeight() - height, height do
-    for x = 0, image:getWidth() - width, width do
-      table.insert(
-        animation.quads,
-        love.graphics.newQuad(
-          x,
-          y,
-          width,
-          height,
-          image:getDimensions()
-        )
-      )
-    end
+-- run time table
+local runTimes = {}
+-- Main Load
+function love.load()
+  -- GLOBAL VARIABLES
+  function initGlobals()
+    player = {}
+    obstacles = {}
+    gameSpeed = 300
+    floorLevel = 500
+    windowx = love.graphics.getWidth()
+    windowy = love.graphics.getHeight()
+  end
+  -- Trunacates the timers trailing decimals
+  function truncateTime(number)
+    local decimals = 2
+    local power = 10^decimals
+    return math.floor(number * power) / power
   end
 
-  animation.duration = duration or 1
-  animation.currentTime = 0
+  function bestRunTime(thisTable, runTime)
+    table.insert(thisTable, runTime)
+    table.sort(thisTable, function(a,b) return a > b end)
+    return tostring(thisTable[1])
+  end
 
-  return animation
-end
+  -- Creates a new animation out of a sprite
+  function newAnimation(image, width, height, duration)
+    local animation = {}
+    animation.spriteSheet = image
+    animation.quads = {}
 
-function spriteNum(item)
-  local item = item
-  return math.floor(item.img.currentTime / item.img.duration * #item.img.quads) + 1
-end
-
-function newObstacle(img, x, y, w, h)
-  local obstacle = {}
-  obstacle.x = x
-  obstacle.y = y
-  obstacle.img = img
-  obstacle.width = w
-  obstacle.height = h
-  obstacle.removed = false
-  table.insert(obstacles, obstacle)
-end
-
-function loadPlayer(img, x, y, w, h)
-  player.x = x
-	player.y = y
-  player.width = w
-  player.height = h
-	player.img = img
-	player.ground = player.y
-	player.y_velocity = 0
-	player.jump_height = -600
-	player.gravity = -1000
-  player.mode = "mouse"
-end
-
--- boundingBox Collision detection
-function CheckCollision(box1x, box1y, box1w, box1h, box2x, box2y, box2w, box2h)
-    if box1x > box2x + box2w - 5 or -- Is box1 on the right side of box2?
-       box1y > box2y + box2h - 5 or -- Is box1 under box2?
-       box2x > box1x + box1w - 5 or -- Is box2 on the right side of box1?
-       box2y > box1y + box1h - 5    -- Is b2 under b1?
-    then
-        return false
-    else
-        return true
+    for y = 0, image:getHeight() - height, height do
+      for x = 0, image:getWidth() - width, width do
+        table.insert(
+          animation.quads,
+          love.graphics.newQuad(
+            x,
+            y,
+            width,
+            height,
+            image:getDimensions()
+          )
+        )
+      end
     end
-end
 
--- LOAD
-function love.load()
-  -- Gamestate loading
-  Gamestate.registerEvents()
-  Gamestate.switch(startMenu)
-  -- Load Timers
-  startTime = love.timer.getTime()
-  spawnTimer = Timer.new()
-  -- Load sounds
-  sounds = {}
-  sounds.mouseSqueak = {}
-  sounds.mouseSqueak.audio = love.audio.newSource("/assets/mouseSqueak.mp3", "static")
-  sounds.mouseSqueak.played = false
-  sounds.backgroundMusic = {}
-  sounds.backgroundMusic.audio = love.audio.newSource("/assets/mecha-mouse-track.wav", "stream")
-  sounds.backgroundMusic.audio:setLooping(true)
-  sounds.backgroundMusic.audio:play()
-  -- Load fonts
-  menuFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 25)
-  largeFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 100)
-  -- Load images
-  mouseSprite = newAnimation(love.graphics.newImage("/assets/mouse.png"), 100, 100, 1)
-  mouseJumpImg = love.graphics.newImage("/assets/mouseJump.png")
-  mechaSprite = newAnimation(love.graphics.newImage("/assets/mecha.png"), 100, 100, 1)
-  mechaJumpImg = love.graphics.newImage("/assets/mechaJump.png")
-  deadMouseSprite = newAnimation(love.graphics.newImage("/assets/deadMouse.png"), 100, 100, 0.9)
-  poopImg = love.graphics.newImage("/assets/poop.png")
-  cokeImg = love.graphics.newImage("/assets/coke-can.png")
-  flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.8)
+    animation.duration = duration or 1
+    animation.currentTime = 0
 
-  -- BACKGROUND LOAD
-  bgImg = love.graphics.newImage("/assets/curbSprite.png")
+    return animation
+  end
 
-  bg1 = {}
-  bg1.img = love.graphics.newQuad(0, 0, 800, 450, 1600, 450)
-  bg1.x = 0
-  bg1.width = 800
+  -- Tracks the current sprite showing
+  function spriteNum(item)
+    local item = item
+    return math.floor(item.img.currentTime / item.img.duration * #item.img.quads) + 1
+  end
 
-  bg2 = {}
-  bg2.img = love.graphics.newQuad(800, 0, 800, 450, 1600, 450)
-  bg2.x = -windowx
-  bg2.width = 800
-
-  -- PLATFORM LOAD
-  pfImg = love.graphics.newImage("/assets/Road_035.png")
-
-  pf1 = {}
-  pf1.img = love.graphics.newQuad(0, 0, 800, 200, 1400, 200)
-  pf1.x = 0
-  pf1.width = windowx
-
-  pf2 = {}
-  pf2.img = love.graphics.newQuad(0, 0, 800, 200, 1400, 200)
-  pf2.x = -windowx
-  pf2.width = windowx
-
-  --loadPlatform(platformSprite)
-
-  loadPlayer(mouseSprite, 5, floorLevel - 100, 100, 100)
-
+  -- Animates the sprites in game.update
   function animate(animation, dt)
     animation.currentTime = animation.currentTime + dt
     if animation.currentTime >= animation.duration then
@@ -154,33 +73,154 @@ function love.load()
     end
   end
 
-  spawnTimer:every(2, function()
-    gameSpeed = gameSpeed + 15
-    local function getRandom()
-      return love.math.random(0, 1)
+  -- Creates a new obstacle
+  function newObstacle(img, x, y, w, h)
+    local obstacle = {}
+    obstacle.x = x
+    obstacle.y = y
+    obstacle.img = img
+    obstacle.width = w
+    obstacle.height = h
+    obstacle.removed = false
+    table.insert(obstacles, obstacle)
+  end
+
+  -- Creates the player object
+  function loadPlayer(img, x, y, w, h)
+    player.x = x
+  	player.y = y
+    player.width = w
+    player.height = h
+  	player.img = img
+  	player.ground = player.y
+  	player.y_velocity = 0
+  	player.jump_height = -600
+  	player.gravity = -1000
+    player.mode = "mouse"
+  end
+
+  -- boundingBox Collision detection
+  function CheckCollision(box1x, box1y, box1w, box1h, box2x, box2y, box2w, box2h)
+      if box1x > box2x + box2w - 5 or -- Is box1 on the right side of box2?
+         box1y > box2y + box2h - 5 or -- Is box1 under box2?
+         box2x > box1x + box1w - 5 or -- Is box2 on the right side of box1?
+         box2y > box1y + box1h - 5    -- Is b2 under b1?
+      then
+          return false
+      else
+          return true
+      end
+  end
+
+  -- Gamestate loading
+  function loadMenu()
+    Gamestate.registerEvents()
+    Gamestate.switch(startMenu)
+  end
+  -- Load Timers
+  function loadTimers()
+    startTime = love.timer.getTime()
+    spawnTimer = Timer.new()
+    -- Spawn timer: spwans a random obstacle every two seconds
+    spawnTimer:every(2, function()
+      gameSpeed = gameSpeed + 15
+      local function getRandom()
+        return love.math.random(0, 1)
+      end
+      local randomNumber = getRandom()
+      if randomNumber == 1 then
+        obstacle1 = newObstacle(poopImg, 1200, floorLevel - 100, 100, 100)
+        obstacle3 = newObstacle(flySprite, 1200, floorLevel - 500, 100, 100)
+      else
+        obstacle2 = newObstacle(cokeImg, 1200, floorLevel - 200, 90, 200)
+      end
+    end)
+  end
+  -- Load sounds
+  function loadSounds()
+    sounds = {}
+    sounds.mouseSqueak = {}
+    sounds.mouseSqueak.audio = love.audio.newSource("/assets/mouseSqueak.mp3", "static")
+    sounds.mouseSqueak.played = false
+  end
+  --Load background music
+  function loadBackgroundMusic()
+    sounds.backgroundMusic = {}
+    sounds.backgroundMusic.audio = love.audio.newSource("/assets/mecha-mouse-track.wav", "stream")
+    if sounds.backgroundMusic.audio:isPlaying() == false then
+      sounds.backgroundMusic.audio:setLooping(true)
+      sounds.backgroundMusic.audio:play()
     end
-    local randomNumber = getRandom()
-    if randomNumber == 1 then
-      obstacle1 = newObstacle(poopImg, 1200, floorLevel - 100, 100, 100)
-      obstacle3 = newObstacle(flySprite, 1200, floorLevel - 500, 100, 100)
-    else
-      obstacle2 = newObstacle(cokeImg, 1200, floorLevel - 200, 90, 200)
-    end
-  end)
+  end
+  -- Load fonts
+  function loadFonts()
+    menuFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 25)
+    largeFont = love.graphics.newFont("/assets/COMPUTERRobot.ttf", 50)
+  end
+  -- Load images
+  function loadImages()
+    mouseSprite = newAnimation(love.graphics.newImage("/assets/mouse.png"), 100, 100, 0.8)
+    mouseJumpImg = love.graphics.newImage("/assets/mouseJump.png")
+    mechaSprite = newAnimation(love.graphics.newImage("/assets/mecha.png"), 100, 100, 0.8)
+    mechaJumpImg = love.graphics.newImage("/assets/mechaJump.png")
+    deadMouseSprite = newAnimation(love.graphics.newImage("/assets/deadMouse.png"), 100, 100, 0.9)
+    poopImg = love.graphics.newImage("/assets/poop.png")
+    cokeImg = love.graphics.newImage("/assets/coke-can.png")
+    flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.8)
+  end
+  -- BACKGROUND LOAD
+  function loadBackground()
+    bgImg = love.graphics.newImage("/assets/curbSprite.png")
+
+    bg1 = {}
+    bg1.img = love.graphics.newQuad(0, 0, 800, 450, 1600, 450)
+    bg1.x = 0
+    bg1.width = 800
+
+    bg2 = {}
+    bg2.img = love.graphics.newQuad(800, 0, 800, 450, 1600, 450)
+    bg2.x = -windowx
+    bg2.width = 800
+
+    -- PLATFORM LOAD
+    pfImg = love.graphics.newImage("/assets/Road_035.png")
+
+    pf1 = {}
+    pf1.img = love.graphics.newQuad(0, 0, 800, 200, 1400, 200)
+    pf1.x = 0
+    pf1.width = windowx
+
+    pf2 = {}
+    pf2.img = love.graphics.newQuad(0, 0, 800, 200, 1400, 200)
+    pf2.x = -windowx
+    pf2.width = windowx
+  end
+
+  initGlobals()
+  loadImages()
+  loadFonts()
+  loadPlayer(mouseSprite, 5, floorLevel - 100, 100, 100)
+  loadSounds()
+  loadBackgroundMusic()
+  loadBackground()
+  loadMenu()
+  loadTimers()
+
 end
 
+-- STARTMENU SWITCH
+function startMenu:update()
+  function startMenu:keypressed(key)
+    if key == "return" then
+      Gamestate.switch(game)
+    end
+  end
+end
 -- STARTMENU DRAW
 function startMenu:draw()
   love.graphics.setBackgroundColor(0, 0, 0)
   love.graphics.setFont(menuFont)
   love.graphics.print("PRESS ENTER TO START", 200, 200)
-end
-
--- STARTMENU SWITCH
-function startMenu:keypressed(key)
-  if key == "return" then
-    Gamestate.switch(game)
-  end
 end
 
 -- GAME UPDATE
@@ -245,6 +285,14 @@ function game:update(dt)
         player.mode = "mouse"
       end
     end
+
+    if key == "return" and player.mode == "dead" then
+      initGlobals()
+      loadSounds()
+      loadPlayer(mouseSprite, 5, floorLevel - 100, 100, 100)
+      loadTimers()
+    end
+
   end
 
   for i = #obstacles, 1, -1 do
@@ -294,13 +342,16 @@ function game:draw()
       player.jump_height = 0
       gameSpeed = 0
       spawnTimer:clear()
+      local thisRunTime = truncateTime(gameTimer)
+      love.graphics.print("Press enter to reset", 300, 375)
       love.graphics.setFont(largeFont)
-      love.graphics.print(truncateTime(gameTimer), 400, 400)
+      love.graphics.print("This run: " .. thisRunTime, 300, 400)
+      love.graphics.print("Best run: " .. bestRunTime(runTimes, thisRunTime), 300, 450)
     end
   end
   -- PLAYER
   if (player.mode == "mouse") then
-    if (player.y_velocity > 0) then
+    if (player.y_velocity ~= 0) then
       player.img = mouseJumpImg
       love.graphics.draw(player.img, player.x, player.y)
     else
@@ -309,7 +360,7 @@ function game:draw()
       love.graphics.draw(player.img.spriteSheet, player.img.quads[mouseSpriteNum], player.x, player.y)
     end
   elseif (player.mode == "mecha") then
-    if (player.y_velocity > 0) then
+    if (player.y_velocity ~= 0) then
       player.img = mechaJumpImg
       love.graphics.draw(player.img, player.x, player.y)
     else
