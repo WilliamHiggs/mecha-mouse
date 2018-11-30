@@ -19,6 +19,7 @@ function love.load()
     windowx = love.graphics.getWidth()
     windowy = love.graphics.getHeight()
   end
+
   -- Trunacates the timers trailing decimals
   function truncateTime(number)
     local decimals = 2
@@ -26,6 +27,7 @@ function love.load()
     return math.floor(number * power) / power
   end
 
+ -- Inserts latest run, sorts and returns the longest time
   function bestRunTime(thisTable, runTime)
     table.insert(thisTable, runTime)
     table.sort(thisTable, function(a,b) return a > b end)
@@ -123,16 +125,18 @@ function love.load()
     spawnTimer = Timer.new()
     -- Spawn timer: spwans a random obstacle every two seconds
     spawnTimer:every(2, function()
-      gameSpeed = gameSpeed + 15
+      gameSpeed = gameSpeed + 20
       local function getRandom()
-        return love.math.random(0, 1)
+        return love.math.random(0, 2)
       end
       local randomNumber = getRandom()
-      if randomNumber == 1 then
+      if randomNumber == 0 then
         obstacle1 = newObstacle(poopImg, 1200, floorLevel - 100, 100, 100)
         obstacle3 = newObstacle(flySprite, 1200, floorLevel - 500, 100, 100)
-      else
+      elseif randomNumber == 1 then
         obstacle2 = newObstacle(cokeImg, 1200, floorLevel - 200, 90, 200)
+      elseif randomNumber == 2 then
+        obstacle4 = newObstacle(racoonSprite, 1200, floorLevel - 144, 100, 144)
       end
     end)
   end
@@ -167,6 +171,7 @@ function love.load()
     poopImg = love.graphics.newImage("/assets/poop.png")
     cokeImg = love.graphics.newImage("/assets/coke-can.png")
     flySprite = newAnimation(love.graphics.newImage("/assets/flySprite.png"), 128, 128, 0.8)
+    racoonSprite = newAnimation(love.graphics.newImage("/assets/racoon.png"), 100, 144, 1)
   end
   -- BACKGROUND LOAD
   function loadBackground()
@@ -175,12 +180,12 @@ function love.load()
     bg1 = {}
     bg1.img = love.graphics.newQuad(0, 0, 800, 450, 1600, 450)
     bg1.x = 0
-    bg1.width = 800
+    bg1.width = windowx
 
     bg2 = {}
     bg2.img = love.graphics.newQuad(800, 0, 800, 450, 1600, 450)
     bg2.x = -windowx
-    bg2.width = 800
+    bg2.width = windowx
 
     -- PLATFORM LOAD
     pfImg = love.graphics.newImage("/assets/Road_035.png")
@@ -209,7 +214,8 @@ function love.load()
 end
 
 -- STARTMENU SWITCH
-function startMenu:update()
+function startMenu:update(dt)
+  animate(racoonSprite, dt)
   function startMenu:keypressed(key)
     if key == "return" then
       Gamestate.switch(game)
@@ -218,9 +224,19 @@ function startMenu:update()
 end
 -- STARTMENU DRAW
 function startMenu:draw()
+  string = [[
+  UP - To jump
+  SPACE - To change mode
+  ESC - To quit
+  ]]
   love.graphics.setBackgroundColor(0, 0, 0)
+  love.graphics.setFont(largeFont)
+  love.graphics.print("MECHA-MOUSE", 200, 100)
   love.graphics.setFont(menuFont)
-  love.graphics.print("PRESS ENTER TO START", 200, 200)
+  love.graphics.print(string, 200, 200)
+  love.graphics.print("PRESS ENTER TO START", 200, 300)
+  love.graphics.draw(player.img.spriteSheet, player.img.quads[1], player.x, player.y)
+  love.graphics.draw(racoonSprite.spriteSheet, racoonSprite.quads[1], 600, floorLevel - 144)
 end
 
 -- GAME UPDATE
@@ -252,6 +268,7 @@ function game:update(dt)
   animate(mechaSprite, dt)
   animate(deadMouseSprite, dt)
   animate(flySprite, dt)
+  animate(racoonSprite, dt)
 
   if love.keyboard.isDown("up") then
     if player.y_velocity == 0 then
@@ -306,14 +323,13 @@ end
 
 -- GAME DRAW
 function game:draw()
-  -- TIMER
+  -- SET TIMER
   if player.mode ~= "dead" then
     gameTimer = love.timer.getTime() - startTime
   end
-  -- BACKGROUND
+  -- BACKGROUND + PLATFORM
   love.graphics.draw(bgImg, bg1.img, bg1.x, 0)
   love.graphics.draw(bgImg, bg2.img, bg2.x, 0)
-  -- PLATFORM
   love.graphics.draw(pfImg, pf1.img, pf1.x, floorLevel - 50)
   love.graphics.draw(pfImg, pf2.img, pf2.x, floorLevel - 50)
   -- DRAW TIMER
@@ -324,7 +340,7 @@ function game:draw()
   -- OBSTACLES
   for i = #obstacles, 1, -1 do
     local obstacle = obstacles[i]
-    -- draw stuff
+
     if type(obstacle.img) == "table" then
       local obstacleSpriteNum = spriteNum(obstacle)
       love.graphics.draw(obstacle.img.spriteSheet, obstacle.img.quads[obstacleSpriteNum], obstacle.x, obstacle.y)
@@ -333,22 +349,11 @@ function game:draw()
     end
 
     if CheckCollision(player.x, player.y, player.width, player.height, obstacle.x, obstacle.y, obstacle.width, obstacle.height) then
-      -- Player death sequence
-      if (sounds.mouseSqueak.played == false) then
-        sounds.mouseSqueak.audio:play()
-        sounds.mouseSqueak.played = true
-      end
+      -- If collision player is dead
       player.mode = "dead"
-      player.jump_height = 0
-      gameSpeed = 0
-      spawnTimer:clear()
-      local thisRunTime = truncateTime(gameTimer)
-      love.graphics.print("Press enter to reset", 300, 375)
-      love.graphics.setFont(largeFont)
-      love.graphics.print("This run: " .. thisRunTime, 300, 400)
-      love.graphics.print("Best run: " .. bestRunTime(runTimes, thisRunTime), 300, 450)
     end
   end
+
   -- PLAYER
   if (player.mode == "mouse") then
     if (player.y_velocity ~= 0) then
@@ -372,6 +377,21 @@ function game:draw()
     player.img = deadMouseSprite
     local deadMouseSpriteNum = spriteNum(player)
     love.graphics.draw(player.img.spriteSheet, player.img.quads[deadMouseSpriteNum], player.x, player.y)
+    -- Play squeak once only
+    if (sounds.mouseSqueak.played == false) then
+      sounds.mouseSqueak.audio:play()
+      sounds.mouseSqueak.played = true
+    end
+    -- clear globals
+    player.jump_height = 0
+    gameSpeed = 0
+    spawnTimer:clear()
+    -- show game times
+    local thisRunTime = truncateTime(gameTimer)
+    love.graphics.print("Press enter to restart", 300, 375)
+    love.graphics.setFont(largeFont)
+    love.graphics.print("This run: " .. thisRunTime, 300, 400)
+    love.graphics.print("Best run: " .. bestRunTime(runTimes, thisRunTime), 300, 450)
   end
 
 end
