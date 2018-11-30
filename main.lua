@@ -146,6 +146,11 @@ function love.load()
     sounds.mouseSqueak = {}
     sounds.mouseSqueak.audio = love.audio.newSource("/assets/mouseSqueak.mp3", "static")
     sounds.mouseSqueak.played = false
+    sounds.mouseJump = {}
+    sounds.mouseJump.audio = love.audio.newSource("assets/jump.wav", "static")
+    sounds.mouseSqueak.played = false
+    sounds.mouseChange = {}
+    sounds.mouseChange.audio = love.audio.newSource("assets/change.wav", "static")
   end
   --Load background music
   function loadBackgroundMusic()
@@ -234,7 +239,7 @@ function startMenu:draw()
   love.graphics.print("MECHA-MOUSE", 200, 100)
   love.graphics.setFont(menuFont)
   love.graphics.print(string, 200, 200)
-  love.graphics.print("PRESS ENTER TO START", 200, 300)
+  love.graphics.print("PRESS ENTER TO START", 200, 350)
   love.graphics.draw(player.img.spriteSheet, player.img.quads[1], player.x, player.y)
   love.graphics.draw(racoonSprite.spriteSheet, racoonSprite.quads[1], 600, floorLevel - 144)
 end
@@ -273,6 +278,7 @@ function game:update(dt)
   if love.keyboard.isDown("up") then
     if player.y_velocity == 0 then
       player.y_velocity = player.jump_height
+      sounds.mouseJump.audio:play()
     end
   end
 
@@ -286,12 +292,14 @@ function game:update(dt)
     player.y = player.ground
   end
 
+
   function love.keypressed(key)
     if key == "escape" then
       love.event.push("quit")
     end
 
     if key == "space" then
+      sounds.mouseChange.audio:play()
       if player.mode == "mouse" then
         --player.img = -- mecha sprite
         player.jump_height = -800 -- mecha jump height
@@ -334,7 +342,7 @@ function game:draw()
   love.graphics.draw(pfImg, pf2.img, pf2.x, floorLevel - 50)
   -- DRAW TIMER
   love.graphics.setFont(menuFont)
-  love.graphics.print(truncateTime(gameTimer), 500, 20)
+  love.graphics.print(truncateTime(gameTimer), 740, 20)
   -- PLAYER MODE
   love.graphics.print(player.mode, 40, 20)
   -- OBSTACLES
