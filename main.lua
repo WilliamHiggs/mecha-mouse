@@ -45,11 +45,7 @@ function love.load()
         table.insert(
           animation.quads,
           love.graphics.newQuad(
-            x,
-            y,
-            width,
-            height,
-            image:getDimensions()
+            x, y, width, height, image:getDimensions()
           )
         )
       end
@@ -214,7 +210,6 @@ function love.load()
   loadBackgroundMusic()
   loadBackground()
   loadMenu()
-  loadTimers()
 
 end
 
@@ -223,6 +218,7 @@ function startMenu:update(dt)
   animate(racoonSprite, dt)
   function startMenu:keypressed(key)
     if key == "return" then
+      loadTimers()
       Gamestate.switch(game)
     end
   end
